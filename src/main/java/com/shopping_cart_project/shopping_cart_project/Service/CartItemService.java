@@ -5,18 +5,22 @@ import com.shopping_cart_project.shopping_cart_project.Entity.CartItem;
 import com.shopping_cart_project.shopping_cart_project.Entity.Product;
 import com.shopping_cart_project.shopping_cart_project.Entity.User;
 import com.shopping_cart_project.shopping_cart_project.Repository.CartItemRepository;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class CartItemService {
     private final CartItemRepository cartItemRepository;
     private final UserService userService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public CartItemService(CartItemRepository cartItemRepository, UserService userService) {
+    public CartItemService(CartItemRepository cartItemRepository, UserService userService, RedisTemplate<String, Object> redisTemplate) {
         this.cartItemRepository = cartItemRepository;
         this.userService = userService;
+        this.redisTemplate = redisTemplate;
     }
 
     //檢查商品是否在購物車中
@@ -40,6 +44,10 @@ public class CartItemService {
         if(user.getId().equals(userId)) {
             item.setQuantity(cartItem.getQuantity());
             item.setPrice(item.getQuantity() * item.getProduct().getPrice());
+
+            //刪除快取
+            String cacheKey = "cartItem:" + id;
+            redisTemplate.delete(cacheKey);
         }
 
         return cartItemRepository.save(item);
@@ -47,9 +55,18 @@ public class CartItemService {
 
     //用ID查詢CartItem
     public CartItem findCartItemById(Long id) throws Exception {
+        //尋找快取
+        String cacheKey = "cartItem:" + id;
+        CartItem cachedCartItem = (CartItem) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedCartItem != null) {
+            return cachedCartItem;
+        }
+        //cache miss
         Optional<CartItem> optionalCartItem = cartItemRepository.findById(id);
         if(optionalCartItem.isPresent()) {
-            return optionalCartItem.get();
+            CartItem cartItem = optionalCartItem.get();
+            redisTemplate.opsForValue().set(cacheKey, cartItem, 30, TimeUnit.SECONDS);
+            return cartItem;
         }
         throw new Exception("CartItem not found with id : " + id);
     }
@@ -61,6 +78,9 @@ public class CartItemService {
         User reqUser = userService.findUserById(userId);
         if(user.getId().equals(reqUser.getId())) {
             cartItemRepository.deleteById(id);
+            //刪除快取
+            String cacheKey = "cartItem:" + id;
+            redisTemplate.delete(cacheKey);
             return;
         }
         throw new Exception("Can't remove another users item");

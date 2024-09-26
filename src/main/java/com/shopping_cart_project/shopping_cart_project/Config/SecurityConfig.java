@@ -29,14 +29,13 @@ public class SecurityConfig {
                 //在基本的filter前，加上JWT認證的filter
                 .addFilterBefore(new JWTAuthenticationFilter(), BasicAuthenticationFilter.class)
                 //CORS相關設定
-                .cors(cors -> cors.configurationSource(new CorsConfigurationSource() {
+                /*.cors(cors -> cors.configurationSource(new CorsConfigurationSource() {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
                         CorsConfiguration config = new CorsConfiguration();
                         //允許的網址來源
                         config.setAllowedOrigins(Arrays.asList(
-                                //"http://localhost:5173",
-                                "https://localhost:5173"
+                                "http://localhost:5173"
                         ));
                         //允許的HTTP request methods
                         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -49,7 +48,7 @@ public class SecurityConfig {
                         config.setMaxAge(3600L);
                         return config;
                     }
-                }));
+                }))*/;
         return httpSecurity.build();
     }
 

@@ -3,21 +3,25 @@ package com.shopping_cart_project.shopping_cart_project.Service;
 import com.shopping_cart_project.shopping_cart_project.Config.JWTProvider;
 import com.shopping_cart_project.shopping_cart_project.Entity.User;
 import com.shopping_cart_project.shopping_cart_project.Repository.UserRepository;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JWTProvider jwtProvider;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
+        this.redisTemplate = redisTemplate;
     }
 
     public void createUser(User user) throws Exception {
@@ -38,12 +42,23 @@ public class UserService {
     }
 
     public User findUserByEmail(String email){
-        return userRepository.findByEmail(email);
+        String cacheKey = "user:email:" + email;
+        User cachedUser = (User) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedUser != null) {
+            return cachedUser;
+        }
+
+        User user = userRepository.findByEmail(email);
+        if (user != null) {
+            redisTemplate.opsForValue().set(cacheKey, user, 30, TimeUnit.MINUTES);
+        }
+
+        return user;
     }
 
     public User findUserByJWT(String jwt) throws Exception{
         String email = jwtProvider.getEmailFromJWT(jwt);
-        User user = userRepository.findByEmail(email);
+        User user = findUserByEmail(email);
         if(user == null){
             throw new Exception("Error: Invalid JWT");
         }
@@ -51,9 +66,17 @@ public class UserService {
     }
 
     public User findUserById(Long id) throws Exception{
+        String cacheKey = "user:id:" + id;
+        User cachedUser = (User) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedUser != null) {
+            return cachedUser;
+        }
+
         Optional<User> opt = userRepository.findById(id);
         if(opt.isPresent()){
-            return opt.get();
+            User user = opt.get();
+            redisTemplate.opsForValue().set(cacheKey, user, 30, TimeUnit.MINUTES);
+            return user;
         }
         throw new Exception("Error: User not found with id: " + id);
     }

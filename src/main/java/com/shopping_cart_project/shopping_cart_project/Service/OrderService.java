@@ -7,18 +7,22 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public OrderService(OrderRepository orderRepository){
+    public OrderService(OrderRepository orderRepository, RedisTemplate<String, Object> redisTemplate){
         this.orderRepository = orderRepository;
+        this.redisTemplate = redisTemplate;
         Dotenv dotenv = Dotenv.load();
         //設定Stripe的私鑰，沒有私鑰就無法產生支付連結。
         Stripe.apiKey = dotenv.get("STRIPE_PRIVATE_KEY");
@@ -79,12 +83,19 @@ public class OrderService {
 
     //使用用戶ID查詢用戶的訂單資訊，查詢時同時更新資料
     public List<Order> findOrderByUserId(Long userId) throws Exception {
+        String cacheKey = "orders:userId:" + userId;
+        List<Order> cachedOrders = (List<Order>) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedOrders != null) {
+            return cachedOrders;
+        }
+
         List<Order> orders = orderRepository.findOrderByUserId(userId);
         List<Order> updated_orders = new ArrayList<>();
         for(Order order: orders){
             updateOrder(order.getId());
             updated_orders.add(order);
         }
+        redisTemplate.opsForValue().set(cacheKey, updated_orders, 1, TimeUnit.MINUTES);
         return updated_orders;
     }
 

@@ -6,17 +6,21 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, RedisTemplate<String, Object> redisTemplate) {
         this.productRepository = productRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     public Product addProduct(Product product) {
@@ -25,19 +29,45 @@ public class ProductService {
 
     public String deleteProduct(Long id){
         productRepository.deleteById(id);
+        //刪除Redis快取
+        String cacheKey = "product:" + id;
+        redisTemplate.delete(cacheKey);
         return "Product deleted successfully";
     }
 
     public Product getProductById(Long id) throws Exception{
+        //從Redis取得快取資料
+        String cacheKey = "product:" + id;
+        Product cachedProduct = (Product) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedProduct != null) {
+            return cachedProduct;
+        }
+        //沒有在Redis快取中，必須從資料庫取得
         Optional<Product> opt = productRepository.findById(id);
         if(opt.isPresent()){
-            return opt.get();
+            Product product = opt.get();
+            //存入Redis快取，設定30秒後過期
+            redisTemplate.opsForValue().set(cacheKey, product, 30, TimeUnit.SECONDS);
+            return product;
         }
         throw new Exception("Product not found");
     }
 
     public Page<Product> getProductsByFilter(String category, Integer minPrice, Integer maxPrice,
                                              String sort, Integer pageNumber, Integer pageSize) {
+        //在快取中尋找
+        String cacheKey = "products:filter:category:" + category +
+                ":minPrice:" + minPrice +
+                ":maxPrice:" + maxPrice +
+                ":sort:" + sort +
+                ":page:" + pageNumber +
+                ":size:" + pageSize;
+        Page<Product> cachedPage = (Page<Product>) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedPage != null) {
+            return cachedPage;
+        }
+
+        //沒在快取中
         //取得第pageNumber（頁數是從0開始），每頁有pageSize個產品
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
         //從資料庫取得符合條件的產品
@@ -52,7 +82,11 @@ public class ProductService {
         //從過濾後的產品列表，截取對應頁數和數量的產品
         List<Product> pageContent = products.subList(startIndex, endIndex);
 
+        Page<Product> pageResult = new PageImpl<>(pageContent, pageable, products.size());
+        //存入快取
+        redisTemplate.opsForValue().set(cacheKey, pageResult, 1, TimeUnit.MINUTES);
+
         //回傳內容、分頁資訊（頁碼、一頁有幾筆資料）、符合過濾條件的產品數量
-        return new PageImpl<>(pageContent, pageable, products.size());
+        return pageResult;
     }
 }

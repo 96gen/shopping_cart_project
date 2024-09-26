@@ -1,8 +1,11 @@
 HELP.md
+.env
+*.jar
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+**/OptionController.java
 
 ### STS ###
 .apt_generated
