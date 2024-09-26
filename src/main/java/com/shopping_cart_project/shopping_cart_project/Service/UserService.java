@@ -6,6 +6,7 @@ import com.shopping_cart_project.shopping_cart_project.Repository.UserRepository
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -16,12 +17,14 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTProvider jwtProvider;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
         this.redisTemplate = redisTemplate;
+        this.emailService = emailService;
     }
 
     public void createUser(User user) throws Exception {
@@ -37,8 +40,14 @@ public class UserService {
         createdUser.setEmail(user.getEmail());
         //將密碼加密，提升安全性
         createdUser.setPassword(passwordEncoder.encode(user.getPassword()));
-
+        //寄出恭喜註冊的郵件到註冊Email
+        sendEmail(user.getEmail());
         userRepository.save(createdUser);
+    }
+
+    //使用emailService完成發出Email的功能
+    public void sendEmail(String to) {
+        emailService.sendSimpleEmail(to);
     }
 
     public User findUserByEmail(String email){
