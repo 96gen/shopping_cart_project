@@ -1,8 +1,10 @@
 package com.shopping_cart_project.shopping_cart_project.Service;
 
 import com.shopping_cart_project.shopping_cart_project.Config.JWTProvider;
+import com.shopping_cart_project.shopping_cart_project.Config.RabbitMQConfig;
 import com.shopping_cart_project.shopping_cart_project.Entity.User;
 import com.shopping_cart_project.shopping_cart_project.Repository.UserRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,14 +19,14 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTProvider jwtProvider;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final EmailService emailService;
+    private final RabbitTemplate rabbitTemplate;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate, EmailService emailService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate, RabbitTemplate rabbitTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
         this.redisTemplate = redisTemplate;
-        this.emailService = emailService;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public void createUser(User user) throws Exception {
@@ -45,9 +47,9 @@ public class UserService {
         userRepository.save(createdUser);
     }
 
-    //使用emailService完成發出Email的功能
+    //使用RabbitMQ完成發出Email的功能
     public void sendEmail(String to) {
-        emailService.sendSimpleEmail(to);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, "email.routing.key", to);
     }
 
     public User findUserByEmail(String email){

@@ -25,6 +25,19 @@ services:
     restart: always
     ports:
      - "6379:6379"
+     
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq_cart
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   #專案相關的設定
   app:
@@ -44,6 +57,9 @@ services:
       #改寫application.yaml中的spring: data: redis: host:
       #redis是容器的名稱
       SPRING_DATA_REDIS_HOST: redis
+      #RabbitMQ設定
+      SPRING_RABBITMQ_HOST: rabbitmq
 
 volumes:
   db_data:
+  rabbitmq_data:
