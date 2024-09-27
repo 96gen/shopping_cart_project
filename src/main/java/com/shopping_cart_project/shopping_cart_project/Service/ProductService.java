@@ -55,6 +55,10 @@ public class ProductService {
 
     public Page<Product> getProductsByFilter(String category, Integer minPrice, Integer maxPrice,
                                              String sort, Integer pageNumber, Integer pageSize) {
+        //取得第pageNumber（頁數是從0開始），每頁有pageSize個產品
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        List<Product> products;
+
         //在快取中尋找
         String cacheKey = "products:filter:category:" + category +
                 ":minPrice:" + minPrice +
@@ -62,16 +66,18 @@ public class ProductService {
                 ":sort:" + sort +
                 ":page:" + pageNumber +
                 ":size:" + pageSize;
-        Page<Product> cachedPage = (Page<Product>) redisTemplate.opsForValue().get(cacheKey);
-        if (cachedPage != null) {
-            return cachedPage;
-        }
+        List<Product> cachedProducts = (List<Product>) redisTemplate.opsForValue().get(cacheKey);
 
-        //沒在快取中
-        //取得第pageNumber（頁數是從0開始），每頁有pageSize個產品
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        //從資料庫取得符合條件的產品
-        List<Product> products = productRepository.findProductsByFilter(category, minPrice, maxPrice, sort);
+        if (cachedProducts != null) {
+            //直接將快取的資料放入products
+            products = cachedProducts;
+        }
+        else{
+            //沒在快取中
+            //從資料庫取得符合條件的產品
+            products = productRepository.findProductsByFilter(category, minPrice, maxPrice, sort);
+            redisTemplate.opsForValue().set(cacheKey, products, 1, TimeUnit.MINUTES);
+        }
 
         //設定從哪裡開始取資料，哪裡結束
         int startIndex = (int) pageable.getOffset();//取得指定頁數前有多少資料，等於pageNumber*pageSize
@@ -82,11 +88,7 @@ public class ProductService {
         //從過濾後的產品列表，截取對應頁數和數量的產品
         List<Product> pageContent = products.subList(startIndex, endIndex);
 
-        Page<Product> pageResult = new PageImpl<>(pageContent, pageable, products.size());
-        //存入快取
-        redisTemplate.opsForValue().set(cacheKey, pageResult, 1, TimeUnit.MINUTES);
-
         //回傳內容、分頁資訊（頁碼、一頁有幾筆資料）、符合過濾條件的產品數量
-        return pageResult;
+        return new PageImpl<>(pageContent, pageable, products.size());
     }
 }

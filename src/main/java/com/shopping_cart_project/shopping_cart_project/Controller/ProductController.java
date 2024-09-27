@@ -1,5 +1,6 @@
 package com.shopping_cart_project.shopping_cart_project.Controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.shopping_cart_project.shopping_cart_project.Entity.Product;
 import com.shopping_cart_project.shopping_cart_project.Service.ProductService;
 import org.springframework.data.domain.Page;
@@ -50,7 +51,7 @@ public class ProductController {
                                                              @RequestParam(value = "maxPrice", required = false) Integer maxPrice,
                                                              @RequestParam(value = "sort", required = false) String sort,
                                                              @RequestParam(value = "pageNumber", required = true) Integer pageNumber,
-                                                             @RequestParam(value = "pageSize", required = true) Integer pageSize){
+                                                             @RequestParam(value = "pageSize", required = true) Integer pageSize) throws JsonProcessingException {
         Page<Product> filteredProductsPage = productService.getProductsByFilter(category, minPrice, maxPrice, sort, pageNumber, pageSize);
         return new ResponseEntity<>(filteredProductsPage, HttpStatus.OK);
     }
