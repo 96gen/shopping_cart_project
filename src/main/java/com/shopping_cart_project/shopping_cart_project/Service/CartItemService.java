@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -16,6 +17,8 @@ public class CartItemService {
     private final CartItemRepository cartItemRepository;
     private final UserService userService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final int CARTITEM_REDIS_CACHE_MINUTES = 1;
+    Random random = new Random();
 
     public CartItemService(CartItemRepository cartItemRepository, UserService userService, RedisTemplate<String, Object> redisTemplate) {
         this.cartItemRepository = cartItemRepository;
@@ -65,7 +68,8 @@ public class CartItemService {
         Optional<CartItem> optionalCartItem = cartItemRepository.findById(id);
         if(optionalCartItem.isPresent()) {
             CartItem cartItem = optionalCartItem.get();
-            redisTemplate.opsForValue().set(cacheKey, cartItem, 30, TimeUnit.SECONDS);
+            int random_delay = random.nextInt(3);
+            redisTemplate.opsForValue().set(cacheKey, cartItem, CARTITEM_REDIS_CACHE_MINUTES + random_delay, TimeUnit.SECONDS);
             return cartItem;
         }
         throw new Exception("CartItem not found with id : " + id);

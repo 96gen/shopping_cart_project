@@ -11,12 +11,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class ProductService {
     private final ProductRepository productRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final int PRODUCT_REDIS_CACHE_MINUTES = 1;
+    Random random = new Random();
 
     public ProductService(ProductRepository productRepository, RedisTemplate<String, Object> redisTemplate) {
         this.productRepository = productRepository;
@@ -46,8 +49,9 @@ public class ProductService {
         Optional<Product> opt = productRepository.findById(id);
         if(opt.isPresent()){
             Product product = opt.get();
-            //存入Redis快取，設定30秒後過期
-            redisTemplate.opsForValue().set(cacheKey, product, 30, TimeUnit.SECONDS);
+            //存入Redis快取，設定過期規則
+            int random_delay = random.nextInt(3);
+            redisTemplate.opsForValue().set(cacheKey, product, PRODUCT_REDIS_CACHE_MINUTES + random_delay, TimeUnit.MINUTES);
             return product;
         }
         throw new Exception("Product not found");
@@ -76,7 +80,8 @@ public class ProductService {
             //沒在快取中
             //從資料庫取得符合條件的產品
             products = productRepository.findProductsByFilter(category, minPrice, maxPrice, sort);
-            redisTemplate.opsForValue().set(cacheKey, products, 1, TimeUnit.MINUTES);
+            int random_delay = random.nextInt(3);
+            redisTemplate.opsForValue().set(cacheKey, products, PRODUCT_REDIS_CACHE_MINUTES + random_delay, TimeUnit.MINUTES);
         }
 
         //設定從哪裡開始取資料，哪裡結束

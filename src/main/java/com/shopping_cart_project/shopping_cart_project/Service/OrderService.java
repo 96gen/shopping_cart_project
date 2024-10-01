@@ -13,12 +13,15 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final int ORDER_REDIS_CACHE_MINUTES = 1;
+    Random random = new Random();
 
     public OrderService(OrderRepository orderRepository, RedisTemplate<String, Object> redisTemplate){
         this.orderRepository = orderRepository;
@@ -95,7 +98,8 @@ public class OrderService {
             updateOrder(order.getId());
             updated_orders.add(order);
         }
-        redisTemplate.opsForValue().set(cacheKey, updated_orders, 1, TimeUnit.MINUTES);
+        int random_delay = random.nextInt(3);
+        redisTemplate.opsForValue().set(cacheKey, updated_orders, ORDER_REDIS_CACHE_MINUTES + random_delay, TimeUnit.MINUTES);
         return updated_orders;
     }
 

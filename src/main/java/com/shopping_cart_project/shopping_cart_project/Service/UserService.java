@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -20,6 +21,8 @@ public class UserService {
     private final JWTProvider jwtProvider;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
+    private final int USER_REDIS_CACHE_MINUTES = 30;
+    Random random = new Random();
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JWTProvider jwtProvider, RedisTemplate<String, Object> redisTemplate, RabbitTemplate rabbitTemplate) {
         this.userRepository = userRepository;
@@ -61,7 +64,8 @@ public class UserService {
 
         User user = userRepository.findByEmail(email);
         if (user != null) {
-            redisTemplate.opsForValue().set(cacheKey, user, 30, TimeUnit.MINUTES);
+            int random_delay = random.nextInt(10);
+            redisTemplate.opsForValue().set(cacheKey, user, USER_REDIS_CACHE_MINUTES + random_delay, TimeUnit.MINUTES);
         }
 
         return user;
@@ -86,7 +90,8 @@ public class UserService {
         Optional<User> opt = userRepository.findById(id);
         if(opt.isPresent()){
             User user = opt.get();
-            redisTemplate.opsForValue().set(cacheKey, user, 30, TimeUnit.MINUTES);
+            int random_delay = random.nextInt(10);
+            redisTemplate.opsForValue().set(cacheKey, user, USER_REDIS_CACHE_MINUTES + random_delay, TimeUnit.MINUTES);
             return user;
         }
         throw new Exception("Error: User not found with id: " + id);
