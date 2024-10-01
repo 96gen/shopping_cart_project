@@ -1,6 +1,8 @@
 # 小型電商購物車專案
 一個對初學者友善的Spring Boot購物車專案，無需加入群組就能完成資料庫架構。
+
 教學可[前往iT邦幫忙觀看](https://ithelp.ithome.com.tw/articles/10346761)
+
 從Day15開始，到Day22結束。
 
 ---
