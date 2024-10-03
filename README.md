@@ -49,13 +49,14 @@ GMAIL_PASSWORD=****************
 ```
 
 接著可以選擇：
-1. 使用Maven編譯專案
+1. 安裝MariaDB、Redis、RabbitMQ後，使用Maven編譯專案，執行jar。
 
 ```bash
 mvn clean package -DskipTests
+java -jar shopping_cart_project.jar
 ```
 
-2.  使用Docker Compose，完成環境架構，並自動執行
+2. 或者直接使用Docker Compose，完成環境架構，並自動執行
 
 ```bash
 docker-compose up
