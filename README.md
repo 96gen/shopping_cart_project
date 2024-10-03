@@ -60,3 +60,21 @@ mvn clean package -DskipTests
 ```bash
 docker-compose up
 ```
+
+---
+
+## Jmeter壓力測試
+
+設定12000個Request，對於專案是個很大的挑戰。
+
+![](https://images2.imgbox.com/cf/85/G7MpehmH_o.png)
+
+測試的結果，看最大的延遲為2845ms，100%的通過率，沒有任何錯誤。
+
+![](https://images2.imgbox.com/9b/72/5S371PAc_o.png)
+
+最低的時候，可以達到5ms的低延遲表現。
+
+![](https://images2.imgbox.com/58/77/TjtPYE9F_o.png)
+
+我們的高併發專案通過了壓力測試，並且是在17秒內湧入12000個Request的情況下。
