@@ -27,6 +27,13 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+    - name: Create .env file
+      run: |
+         echo "DATASOURCE_PASSWORD=${{ secrets.DATASOURCE_PASSWORD }}" >> .env
+         echo "JWT_CONSTANT=${{ secrets.JWT_CONSTANT }}" >> .env
+         echo "STRIPE_PRIVATE_KEY=${{ secrets.STRIPE_PRIVATE_KEY }}" >> .env
+         echo "GMAIL_ADDRESS=${{ secrets.GMAIL_ADDRESS }}" >> .env
+         echo "GMAIL_PASSWORD=${{ secrets.GMAIL_PASSWORD }}" >> .env
     - name: Build with Maven
       run: mvn -B package --file pom.xml
 
