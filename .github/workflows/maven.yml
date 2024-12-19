@@ -39,7 +39,7 @@ jobs:
 
     - name: Run integration tests with Docker Compose
       run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 30
           docker compose exec app mvn test
 
