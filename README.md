@@ -59,7 +59,7 @@ java -jar shopping_cart_project.jar
 2. 或者直接使用Docker Compose，完成環境架構，並自動執行
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ---
