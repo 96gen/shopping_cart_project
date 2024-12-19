@@ -35,18 +35,18 @@ jobs:
          echo "GMAIL_ADDRESS=${{ secrets.GMAIL_ADDRESS }}" >> .env
          echo "GMAIL_PASSWORD=${{ secrets.GMAIL_PASSWORD }}" >> .env
     - name: Build Docker images
-      run: docker-compose build
+      run: docker compose build
 
     - name: Run integration tests with Docker Compose
       run: |
           docker-compose up -d
           sleep 30
-          docker-compose exec app mvn test
+          docker compose exec app mvn test
 
       # 停止並清理 Docker 容器
     - name: Tear down Docker Compose
       if: always()
-      run: docker-compose down
+      run: docker compose down
       
     - name: Clean up .env
       run: rm -f .env
